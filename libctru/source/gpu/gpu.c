@@ -43,8 +43,6 @@ static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 		else     memset(&gpuCmdBuf[gpuCmdBufOffset],         0, paramlength*4);
 	}
 
-	gpuCmdBufOffset+=paramlength+2;
-
 	gpuCmdBufOffset += paramlength & 1; // alignment
 	// if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
 }
