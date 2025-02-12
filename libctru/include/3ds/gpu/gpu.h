@@ -105,8 +105,6 @@ static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 	GPUCMD_Add(header, &param, 1);
 }
 
-void* GPU_TEST_FUNC(void);
-
 /// Adds a masked register write to the current command buffer.
 #define GPUCMD_AddMaskedWrite(reg, mask, val) GPUCMD_AddSingleParam(GPUCMD_HEADER(0, (mask), (reg)), (val))
 /// Adds a register write to the current command buffer.

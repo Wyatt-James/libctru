@@ -202,8 +202,3 @@ u32 f32tof31(float f)
 
 	return sign << 30 | exponent << 23 | mantissa;
 }
-
-void* GPU_TEST_FUNC(void)
-{
-	return NULL;
-}
