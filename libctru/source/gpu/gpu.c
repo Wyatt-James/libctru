@@ -10,6 +10,8 @@
 #include <3ds/gpu/gx.h>
 #include <3ds/gpu/shbin.h>
 
+#define ASSUME(cond) if (!(cond)) __builtin_unreachable()
+
 u32* gpuCmdBuf;
 u32 gpuCmdBufSize;
 u32 gpuCmdBufOffset;
@@ -30,18 +32,21 @@ static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
 
-	gpuCmdBuf[gpuCmdBufOffset]=param ? param[0] : 0;
-	gpuCmdBuf[gpuCmdBufOffset+1]=header;
+	gpuCmdBuf[gpuCmdBufOffset++]=param ? param[0] : 0;
+	gpuCmdBuf[gpuCmdBufOffset++]=header;
+
+	ASSUME(paramlength != 0); // calling function ensures this
 
 	if(paramlength)
 	{
-		if(param)memcpy(&gpuCmdBuf[gpuCmdBufOffset+2], &param[1], paramlength*4);
-		else     memset(&gpuCmdBuf[gpuCmdBufOffset+2], 0, paramlength*4);
+		if(param)memcpy(&gpuCmdBuf[gpuCmdBufOffset], &param[1], paramlength*4);
+		else     memset(&gpuCmdBuf[gpuCmdBufOffset],         0, paramlength*4);
 	}
 
 	gpuCmdBufOffset+=paramlength+2;
 
-	if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
+	gpuCmdBufOffset += paramlength & 1; // alignment
+	// if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
 }
 
 void GPUCMD_Add(u32 header, const u32* param, u32 paramlength)
