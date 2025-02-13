@@ -10,8 +10,6 @@
 #include <3ds/gpu/gx.h>
 #include <3ds/gpu/shbin.h>
 
-#define ASSUME(cond) if (!(cond)) __builtin_unreachable()
-
 u32* gpuCmdBuf;
 u32 gpuCmdBufSize;
 u32 gpuCmdBufOffset;
@@ -34,8 +32,6 @@ static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 
 	gpuCmdBuf[gpuCmdBufOffset++]=param ? param[0] : 0;
 	gpuCmdBuf[gpuCmdBufOffset++]=header;
-
-	ASSUME(paramlength != 0); // calling function ensures this
 
 	if(paramlength)
 	{
