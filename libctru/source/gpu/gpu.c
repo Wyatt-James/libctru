@@ -198,3 +198,9 @@ u32 f32tof31(float f)
 
 	return sign << 30 | exponent << 23 | mantissa;
 }
+
+// Used to avoid including 3ds/svc.h in gpu.h
+void GPUCMD_SvcBreakUserPanicWrapper()
+{
+	svcBreak(USERBREAK_PANIC);
+}

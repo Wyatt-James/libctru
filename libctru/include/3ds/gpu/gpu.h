@@ -99,10 +99,17 @@ u32 f32tof24(float f);
  */
 u32 f32tof31(float f);
 
+// Wrapper for svcBreak(USERBREAK_PANIC). Used to avoid including 3ds/svc.h in gpu.h.
+void GPUCMD_SvcBreakUserPanicWrapper();
+
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	GPUCMD_Add(header, &param, 1);
+	if(!gpuCmdBuf || gpuCmdBufOffset + 2 > gpuCmdBufSize)
+		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+
+	gpuCmdBuf[gpuCmdBufOffset++]=param;
+	gpuCmdBuf[gpuCmdBufOffset++]=header;
 }
 
 /// Adds a masked register write to the current command buffer.
