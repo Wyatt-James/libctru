@@ -24,7 +24,7 @@ void GPUCMD_AddRawCommands(const u32* cmd, u32 size)
 
 static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 {
-	if(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize))
 		svcBreak(USERBREAK_PANIC); // Shouldn't happen.
 
 	paramlength--;
@@ -33,10 +33,10 @@ static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 	gpuCmdBuf[gpuCmdBufOffset++]=param ? param[0] : 0;
 	gpuCmdBuf[gpuCmdBufOffset++]=header;
 
-	if(paramlength)
+	if(GPUCMD_LIKELY(paramlength))
 	{
-		if(param)memcpy(&gpuCmdBuf[gpuCmdBufOffset], &param[1], paramlength*4);
-		else     memset(&gpuCmdBuf[gpuCmdBufOffset],         0, paramlength*4);
+		if(GPUCMD_LIKELY(param))memcpy(&gpuCmdBuf[gpuCmdBufOffset], &param[1], paramlength*4);
+		else                    memset(&gpuCmdBuf[gpuCmdBufOffset],         0, paramlength*4);
 	}
 
 	gpuCmdBufOffset+=paramlength + (paramlength & 1); // Add LSB twice for alignment

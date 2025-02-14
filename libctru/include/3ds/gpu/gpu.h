@@ -9,6 +9,8 @@
 
 /// Creates a GPU command header from its write increments, mask, and register.
 #define GPUCMD_HEADER(incremental, mask, reg) (((incremental)<<31)|(((mask)&0xF)<<16)|((reg)&0x3FF))
+#define GPUCMD_UNLIKELY(cond_) __builtin_expect(!!(cond_), 0)
+#define GPUCMD_LIKELY(cond_)   __builtin_expect(!!(cond_), 1)
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
 extern u32 gpuCmdBufSize;   ///< GPU command buffer size.
@@ -105,7 +107,7 @@ void GPUCMD_SvcBreakUserPanicWrapper();
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	if(!gpuCmdBuf || gpuCmdBufOffset + 2 > gpuCmdBufSize)
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + 2 > gpuCmdBufSize))
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 
 	gpuCmdBuf[gpuCmdBufOffset++]=param;
