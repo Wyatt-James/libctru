@@ -139,7 +139,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 #define GPUCMD_Single(reg, val) GPUCMD_MaskedSingle((reg), 0xF, (val))
 
 /// Adds a batch of gpucmd_single_t commands directly.
-#define GPUCMD_AddBatchOfSingles(arr) GPUCMD_AddBatchSingles(GPUCMD_ARRAY_COUNT(arr), arr)
+#define GPUCMD_AddBatchOfSingles(arr) GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(arr), arr)
 /// Adds a masked register write to the current command buffer.
 #define GPUCMD_AddMaskedWrite(reg, mask, val) GPUCMD_AddSingleParam(GPUCMD_HEADER(0, (mask), (reg)), (val))
 /// Adds a register write to the current command buffer.
