@@ -50,7 +50,7 @@ CFLAGS	:=	-g -Wall -Werror -mword-relocations \
 			$(ARCH) \
 			$(BUILD_CFLAGS)
 			
-# CFLAGS	+=	-save-temps=obj
+CFLAGS	+=	-save-temps=obj
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__
 
