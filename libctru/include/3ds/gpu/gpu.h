@@ -11,6 +11,12 @@
 #define GPUCMD_HEADER(incremental, mask, reg) (((incremental)<<31)|(((mask)&0xF)<<16)|((reg)&0x3FF))
 #define GPUCMD_UNLIKELY(cond_) __builtin_expect(!!(cond_), 0)
 #define GPUCMD_LIKELY(cond_)   __builtin_expect(!!(cond_), 1)
+#define GPUCMD_ARRAY_COUNT(arr_) (size_t) (sizeof(arr_) / sizeof(arr_[0]))
+
+typedef struct
+{
+	u32 param, header;
+} gpucmd_single_t;
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
 extern u32 gpuCmdBufSize;   ///< GPU command buffer size.
@@ -114,6 +120,26 @@ static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 	gpuCmdBuf[gpuCmdBufOffset++]=header;
 }
 
+static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[count])
+{
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize))
+		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+
+		for (int i = 0; i < count; i++) {
+			gpuCmdBuf[gpuCmdBufOffset + 2 * i + 0] = arr[i].param;
+			gpuCmdBuf[gpuCmdBufOffset + 2 * i + 1] = arr[i].header;
+		}
+	
+		gpuCmdBufOffset += count * 2;
+}
+
+/// Constructs a masked gpucmd_single_t.
+#define GPUCMD_MaskedSingle(reg, mask, val) ((gpucmd_single_t) {.header = GPUCMD_HEADER(0, (mask), (reg)), .param = (val)})
+/// Constructs a gpucmd_single_t.
+#define GPUCMD_Single(reg, val) GPUCMD_MaskedSingle((reg), 0xF, (val))
+
+/// Adds a batch of gpucmd_single_t commands directly.
+#define GPUCMD_AddBatchOfSingles(arr) GPUCMD_AddBatchSingles(GPUCMD_ARRAY_COUNT(arr), arr)
 /// Adds a masked register write to the current command buffer.
 #define GPUCMD_AddMaskedWrite(reg, mask, val) GPUCMD_AddSingleParam(GPUCMD_HEADER(0, (mask), (reg)), (val))
 /// Adds a register write to the current command buffer.
