@@ -221,11 +221,13 @@ static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramleng
 /// Adds multiple masked register writes to the current command buffer.
 /// This "auto" macro will attempt to automatically inline calls
 /// where "num" is a constant expression, and also <= a threshold.
-#define GPUCMD_AddMaskedWrites_Auto(reg, mask, vals, num)			\
-if (GPUCMD_IS_CONSTEXPR(num) && (num) <= GPUCMD_INLINE_THRESH)		\
-	GPUCMD_AddMaskedWrites_Inline((reg), (mask), (vals), (num));	\
-else																\
-	GPUCMD_AddMaskedWrites((reg), (mask), (vals), (num))
+#define GPUCMD_AddMaskedWrites_Auto(reg, mask, vals, num)				\
+do {																	\
+	if (GPUCMD_IS_CONSTEXPR(num) && (num) <= GPUCMD_INLINE_THRESH)		\
+		GPUCMD_AddMaskedWrites_Inline((reg), (mask), (vals), (num));	\
+	else																\
+		GPUCMD_AddMaskedWrites((reg), (mask), (vals), (num));			\
+} while (0)
 
 /// Adds multiple register writes to the current command buffer.
 /// This "auto" macro will attempt to automatically inline calls
@@ -235,11 +237,13 @@ else																\
 /// Adds multiple masked incremental register writes to the current command buffer.
 /// This "auto" macro will attempt to automatically inline calls
 /// where "num" is a constant expression, and also <= a threshold.
-#define GPUCMD_AddMaskedIncrementalWrites_Auto(reg, mask, vals, num)		\
-if (GPUCMD_IS_CONSTEXPR(num) && (num) <= GPUCMD_INLINE_THRESH)				\
-	GPUCMD_AddMaskedIncrementalWrites_Inline((reg), (mask), (vals), (num));	\
-else																		\
-	GPUCMD_AddMaskedIncrementalWrites((reg), (mask), (vals), (num))
+#define GPUCMD_AddMaskedIncrementalWrites_Auto(reg, mask, vals, num)			\
+do {																			\
+	if (GPUCMD_IS_CONSTEXPR(num) && (num) <= GPUCMD_INLINE_THRESH)				\
+		GPUCMD_AddMaskedIncrementalWrites_Inline((reg), (mask), (vals), (num));	\
+	else																		\
+		GPUCMD_AddMaskedIncrementalWrites((reg), (mask), (vals), (num));		\
+} while(0)
 
 /// Adds multiple incremental register writes to the current command buffer.
 /// This "auto" macro will attempt to automatically inline calls
