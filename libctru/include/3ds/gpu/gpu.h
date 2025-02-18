@@ -7,11 +7,16 @@
 #include "registers.h"
 #include "enums.h"
 
+#ifndef GPUCMD_INLINE_THRESH
+#define GPUCMD_INLINE_THRESH 6 /* Attempt to inline GPUCMDs <= this count. Configurable. */
+#endif
+
 /// Creates a GPU command header from its write increments, mask, and register.
 #define GPUCMD_HEADER(incremental, mask, reg) (((incremental)<<31)|(((mask)&0xF)<<16)|((reg)&0x3FF))
-#define GPUCMD_UNLIKELY(cond_) __builtin_expect(!!(cond_), 0)
-#define GPUCMD_LIKELY(cond_)   __builtin_expect(!!(cond_), 1)
-#define GPUCMD_ARRAY_COUNT(arr_) (size_t) (sizeof(arr_) / sizeof(arr_[0]))
+#define GPUCMD_UNLIKELY(cond_)     __builtin_expect(!!(cond_), 0)
+#define GPUCMD_LIKELY(cond_)       __builtin_expect(!!(cond_), 1)
+#define GPUCMD_IS_CONSTEXPR(expr_) __builtin_constant_p(expr_)
+#define GPUCMD_ARRAY_COUNT(arr_)   (size_t) (sizeof(arr_) / sizeof(arr_[0]))
 
 typedef struct
 {
@@ -125,12 +130,49 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize))
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 
-		for (int i = 0; i < count; i++) {
-			gpuCmdBuf[gpuCmdBufOffset + 2 * i + 0] = arr[i].param;
-			gpuCmdBuf[gpuCmdBufOffset + 2 * i + 1] = arr[i].header;
-		}
-	
-		gpuCmdBufOffset += count * 2;
+	for (size_t i = 0; i < count; i++) {
+		gpuCmdBuf[gpuCmdBufOffset + 2 * i + 0] = arr[i].param;
+		gpuCmdBuf[gpuCmdBufOffset + 2 * i + 1] = arr[i].header;
+	}
+
+	gpuCmdBufOffset += count * 2;
+}
+
+// Don't use me.
+static void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
+{
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize))
+		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+
+	paramlength--;
+	header|=(paramlength&0xff)<<20;
+
+	gpuCmdBuf[gpuCmdBufOffset++]=param ? param[0] : 0;
+	gpuCmdBuf[gpuCmdBufOffset++]=header;
+
+	if(GPUCMD_LIKELY(paramlength))
+	{
+		if(GPUCMD_LIKELY(param))memcpy(&gpuCmdBuf[gpuCmdBufOffset], &param[1], paramlength*4);
+		else                    memset(&gpuCmdBuf[gpuCmdBufOffset],         0, paramlength*4);
+	}
+
+	gpuCmdBufOffset+=paramlength + (paramlength & 1); // Add LSB twice for alignment
+	// if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
+}
+
+// Don't use me.
+void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramlength)
+{
+	if(!paramlength)paramlength=1;
+
+	while(paramlength)
+	{
+		u32 remaining = paramlength > 0x100 ? 0x100 : paramlength;
+		GPUCMD_AddInternal_Inline(header, param, remaining);
+		param += remaining;
+		paramlength -= remaining;
+		if(header & BIT(31)) header += remaining;
+	}
 }
 
 /// Constructs a masked gpucmd_single_t.
@@ -152,3 +194,44 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 #define GPUCMD_AddMaskedIncrementalWrites(reg, mask, vals, num) GPUCMD_Add(GPUCMD_HEADER(1, (mask), (reg)), (vals), (num))
 /// Adds multiple incremental register writes to the current command buffer.
 #define GPUCMD_AddIncrementalWrites(reg, vals, num) GPUCMD_AddMaskedIncrementalWrites((reg), 0xF, (vals), (num))
+
+/// Macros that always inline
+
+/// Adds multiple masked register writes to the current command buffer. This will always inline.
+#define GPUCMD_AddMaskedWrites_Inline(reg, mask, vals, num) GPUCMD_Add_Inline(GPUCMD_HEADER(0, (mask), (reg)), (vals), (num))
+/// Adds multiple register writes to the current command buffer. This will always inline.
+#define GPUCMD_AddWrites_Inline(reg, vals, num) GPUCMD_AddMaskedWrites_Inline((reg), 0xF, (vals), (num))
+/// Adds multiple masked incremental register writes to the current command buffer. This will always inline.
+#define GPUCMD_AddMaskedIncrementalWrites_Inline(reg, mask, vals, num) GPUCMD_Add_Inline(GPUCMD_HEADER(1, (mask), (reg)), (vals), (num))
+/// Adds multiple incremental register writes to the current command buffer. This will always inline.
+#define GPUCMD_AddIncrementalWrites_Inline(reg, vals, num) GPUCMD_AddMaskedIncrementalWrites_Inline((reg), 0xF, (vals), (num))
+
+/// Macros that inline automatically
+
+/// Adds multiple masked register writes to the current command buffer.
+/// This "auto" macro will attempt to automatically inline calls
+/// where "num" is a constant expression, and also <= a threshold.
+#define GPUCMD_AddMaskedWrites_Auto(reg, mask, vals, num)				\
+if (GPUCMD_IS_CONSTEXPR(num) && (num) <= GPUCMD_INLINE_THRESH)			\
+	GPUCMD_AddMaskedWrites_Inline((reg), (mask), (vals), (num));		\
+else																	\
+	GPUCMD_AddMaskedWrites((reg), (mask), (vals), (num))
+
+/// Adds multiple register writes to the current command buffer.
+/// This "auto" macro will attempt to automatically inline calls
+/// where "num" is a constant expression, and also <= a threshold.
+#define GPUCMD_AddWrites_Auto(reg, vals, num) GPUCMD_AddMaskedWrites_Auto((reg), 0xF, (vals), (num))
+
+/// Adds multiple masked incremental register writes to the current command buffer.
+/// This "auto" macro will attempt to automatically inline calls
+/// where "num" is a constant expression, and also <= a threshold.
+#define GPUCMD_AddMaskedIncrementalWrites_Auto(reg, mask, vals, num)		\
+if (GPUCMD_IS_CONSTEXPR(num) && (num) <= GPUCMD_INLINE_THRESH)				\
+	GPUCMD_AddMaskedIncrementalWrites_Inline((reg), (mask), (vals), (num));	\
+else																		\
+	GPUCMD_AddMaskedIncrementalWrites((reg), (mask), (vals), (num))
+
+/// Adds multiple incremental register writes to the current command buffer.
+/// This "auto" macro will attempt to automatically inline calls
+/// where "num" is a constant expression, and also <= a threshold.
+#define GPUCMD_AddIncrementalWrites_Auto(reg, vals, num) GPUCMD_AddMaskedWrites_Auto((reg), 0xF, (vals), (num))
