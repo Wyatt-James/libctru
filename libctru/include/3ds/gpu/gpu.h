@@ -139,7 +139,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 }
 
 // Don't use me.
-static void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
+static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
 {
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize))
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
@@ -171,7 +171,7 @@ static void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlen
 }
 
 // Don't use me.
-void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramlength)
+static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramlength)
 {
 	if(!paramlength)paramlength=1;
 
