@@ -13,10 +13,10 @@
 
 /// Creates a GPU command header from its write increments, mask, and register.
 #define GPUCMD_HEADER(incremental, mask, reg) (((incremental)<<31)|(((mask)&0xF)<<16)|((reg)&0x3FF))
-#define GPUCMD_UNLIKELY(cond_)     __builtin_expect(!!(cond_), 0)
-#define GPUCMD_LIKELY(cond_)       __builtin_expect(!!(cond_), 1)
-#define GPUCMD_IS_CONSTEXPR(expr_) __builtin_constant_p(expr_)
-#define GPUCMD_ARRAY_COUNT(arr_)   (size_t) (sizeof(arr_) / sizeof(arr_[0]))
+#define GPUCMD_UNLIKELY(cond_)                __builtin_expect(!!(cond_), 0)
+#define GPUCMD_LIKELY(cond_)                  __builtin_expect(!!(cond_), 1)
+#define GPUCMD_IS_CONSTEXPR(expr_)            __builtin_constant_p(expr_)
+#define GPUCMD_ARRAY_COUNT(arr_)              (size_t) (sizeof(arr_) / sizeof(arr_[0]))
 
 typedef struct
 {
@@ -141,8 +141,10 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 // Don't use me. Use the macros instead.
 static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
 {
-	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize))
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+		return;
+	}
 
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
