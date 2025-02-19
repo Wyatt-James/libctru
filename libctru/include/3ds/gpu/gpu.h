@@ -118,8 +118,10 @@ void GPUCMD_SvcBreakUserPanicWrapper();
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + 2 > gpuCmdBufSize))
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + 2 > gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+		// return;
+	}
 
 	gpuCmdBuf[gpuCmdBufOffset++]=param;
 	gpuCmdBuf[gpuCmdBufOffset++]=header;
@@ -127,8 +129,10 @@ static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 
 static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[count])
 {
-	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize))
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+		// return;
+	}
 
 	for (size_t i = 0; i < count; i++) {
 		gpuCmdBuf[gpuCmdBufOffset + 2 * i + 0] = arr[i].param;
@@ -143,7 +147,7 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 {
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
-		return;
+		// return;
 	}
 
 	paramlength--;

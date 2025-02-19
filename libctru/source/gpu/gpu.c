@@ -26,7 +26,7 @@ static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 {
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
 		svcBreak(USERBREAK_PANIC); // Shouldn't happen.
-		return;
+		// return;
 	}
 
 	paramlength--;
