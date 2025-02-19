@@ -246,4 +246,4 @@ do {																			\
 /// Adds multiple incremental register writes to the current command buffer.
 /// This "auto" macro will attempt to automatically inline calls
 /// where "num" is a constant expression, and also <= a threshold.
-#define GPUCMD_AddIncrementalWrites_Auto(reg, vals, num) GPUCMD_AddMaskedWrites_Auto((reg), 0xF, (vals), (num))
+#define GPUCMD_AddIncrementalWrites_Auto(reg, vals, num) GPUCMD_AddMaskedIncrementalWrites_Auto((reg), 0xF, (vals), (num))
