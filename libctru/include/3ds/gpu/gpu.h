@@ -145,10 +145,12 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 // Don't use me. Use the macros instead.
 static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
 {
+#ifndef CTRU_GPUCMD_DISABLE_BOUNDS_CHECKS
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 		return;
 	}
+#endif
 
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
