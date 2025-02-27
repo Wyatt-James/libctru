@@ -115,20 +115,6 @@ u32 f32tof31(float f);
 // Wrapper for svcBreak(USERBREAK_PANIC). Used to avoid including 3ds/svc.h in gpu.h.
 void GPUCMD_SvcBreakUserPanicWrapper();
 
-/// Adds a command with a single parameter to the current command buffer.
-static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
-{
-#ifndef CTRU_GPUCMD_DISABLE_BOUNDS_CHECKS
-	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + 2 > gpuCmdBufSize)) {
-		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
-		return;
-	}
-#endif
-
-	gpuCmdBuf[gpuCmdBufOffset++]=param;
-	gpuCmdBuf[gpuCmdBufOffset++]=header;
-}
-
 static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[count])
 {
 #ifndef CTRU_GPUCMD_DISABLE_BOUNDS_CHECKS
@@ -145,6 +131,13 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 	}
 
 	gpuCmdBufOffset += count * 2;
+}
+
+/// Adds a command with a single parameter to the current command buffer.
+static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
+{
+	gpucmd_single_t cmds[1] = {{.header = header, .param = param}};
+	GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(cmds), cmds);
 }
 
 // Don't use me. Use the macros instead.
