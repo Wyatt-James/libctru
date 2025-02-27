@@ -153,26 +153,28 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
 
-	gpuCmdBuf[gpuCmdBufOffset++]=param ? param[0] : 0;
-	gpuCmdBuf[gpuCmdBufOffset++]=header;
+	u32 offset = gpuCmdBufOffset; // Local copy allows compiler to optimize properly
+
+	gpuCmdBuf[offset++]=param ? param[0] : 0;
+	gpuCmdBuf[offset++]=header;
 
 	if(GPUCMD_LIKELY(paramlength))
 	{
 		if(GPUCMD_LIKELY(param))
 		{
 			for (int i = 0; i < paramlength; i++) {
-				gpuCmdBuf[gpuCmdBufOffset + i] = param[1 + i];
+				gpuCmdBuf[offset + i] = param[1 + i];
 			}
 		}
 		else
 		{
 			for (int i = 0; i < paramlength; i++) {
-				gpuCmdBuf[gpuCmdBufOffset + i] = 0;
+				gpuCmdBuf[offset + i] = 0;
 			}
 		}
 	}
 
-	gpuCmdBufOffset+=paramlength + (paramlength & 1); // Add LSB twice for alignment
+	gpuCmdBufOffset = offset + paramlength + (paramlength & 1); // Add LSB twice for alignment
 	// if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
 }
 

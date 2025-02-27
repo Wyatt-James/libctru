@@ -32,16 +32,18 @@ static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
 
-	gpuCmdBuf[gpuCmdBufOffset++]=param ? param[0] : 0;
-	gpuCmdBuf[gpuCmdBufOffset++]=header;
+	u32 offset = gpuCmdBufOffset;
+
+	gpuCmdBuf[offset++]=param ? param[0] : 0;
+	gpuCmdBuf[offset++]=header;
 
 	if(GPUCMD_LIKELY(paramlength))
 	{
-		if(GPUCMD_LIKELY(param))memcpy(&gpuCmdBuf[gpuCmdBufOffset], &param[1], paramlength*4);
-		else                    memset(&gpuCmdBuf[gpuCmdBufOffset],         0, paramlength*4);
+		if(GPUCMD_LIKELY(param))memcpy(&gpuCmdBuf[offset], &param[1], paramlength*4);
+		else                    memset(&gpuCmdBuf[offset],         0, paramlength*4);
 	}
 
-	gpuCmdBufOffset+=paramlength + (paramlength & 1); // Add LSB twice for alignment
+	gpuCmdBufOffset = offset + paramlength + (paramlength & 1); // Add LSB twice for alignment
 	// if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
 }
 
