@@ -138,6 +138,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 	}
 #endif
 
+	#pragma GCC unroll 32
 	for (size_t i = 0; i < count; i++) {
 		gpuCmdBuf[gpuCmdBufOffset + 2 * i + 0] = arr[i].param;
 		gpuCmdBuf[gpuCmdBufOffset + 2 * i + 1] = arr[i].header;
