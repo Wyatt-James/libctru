@@ -58,8 +58,10 @@ CFLAGS	+=	-save-temps=obj
 CFLAGS	+=	$(INCLUDE) -D__3DS__
 
 ifeq ($(GPUCMD_DISABLE_BOUNDS_CHECKS),1)
-$(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined calls inside other projcts.)
+$(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined calls inside other projects.)
 CFLAGS	+=	"-DCTRU_GPUCMD_DISABLE_BOUNDS_CHECKS"
+else
+$(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
 $(info GPUCMD Inline Threshold is $(GPUCMD_INLINE_THRESH).)
