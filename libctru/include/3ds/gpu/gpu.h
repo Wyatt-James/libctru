@@ -165,15 +165,19 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 		if(GPUCMD_LIKELY(param))
 		{
 			#pragma GCC unroll 6
-			for (int i = 0; i < paramlength; i++) {
-				gpuCmdBuf[offset + i] = param[1 + i];
+			for (int i = 0; i < (paramlength & ~1); i++) {
+				*(u64*) &gpuCmdBuf[offset + 2 * i] = *(u64*) &param[1 + 2 * i]; // Copy underrun
+			}
+			
+			if (paramlength & 1) {
+				gpuCmdBuf[offset + paramlength - 1] = param[1 + paramlength - 1]; // Add word from underrun
 			}
 		}
 		else
 		{
 			#pragma GCC unroll 6
 			for (int i = 0; i < paramlength; i++) {
-				gpuCmdBuf[offset + i] = 0;
+				*(u64*) &gpuCmdBuf[offset + 2 * i] = 0;
 			}
 		}
 	}
