@@ -20,7 +20,7 @@
 
 typedef union
 {
-	u32 param, header;
+	u32 header, param;
 } gpucmd_single_t;
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
