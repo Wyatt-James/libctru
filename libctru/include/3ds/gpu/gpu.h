@@ -18,9 +18,12 @@
 #define GPUCMD_IS_CONSTEXPR(expr_)            __builtin_constant_p(expr_)
 #define GPUCMD_ARRAY_COUNT(arr_)              (size_t) (sizeof(arr_) / sizeof(arr_[0]))
 
-typedef struct
+typedef union
 {
-	u32 param, header;
+	struct {
+		u32 param, header;
+	};
+	u64 all;
 } gpucmd_single_t;
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
@@ -126,7 +129,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 
 	#pragma GCC unroll 32
 	for (size_t i = 0; i < count; i++) {
-		*((gpucmd_single_t*) &gpuCmdBuf[gpuCmdBufOffset + 2 * i]) = arr[i]; // Struct copy
+		*((u64*) &gpuCmdBuf[gpuCmdBufOffset + 2 * i]) = arr[i].all;
 	}
 
 	gpuCmdBufOffset += count * 2;
