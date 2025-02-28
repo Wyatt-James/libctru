@@ -18,9 +18,9 @@
 #define GPUCMD_IS_CONSTEXPR(expr_)            __builtin_constant_p(expr_)
 #define GPUCMD_ARRAY_COUNT(arr_)              (size_t) (sizeof(arr_) / sizeof(arr_[0]))
 
-typedef union
+typedef struct
 {
-	u32 header, param;
+	u32 param, header;
 } gpucmd_single_t;
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
