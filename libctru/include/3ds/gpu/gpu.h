@@ -20,10 +20,7 @@
 
 typedef union
 {
-	struct {
-		u32 param, header;
-	};
-	u64 all;
+	u32 param, header;
 } gpucmd_single_t;
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
@@ -129,7 +126,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 
 	#pragma GCC unroll 32
 	for (size_t i = 0; i < count; i++) {
-		*((u64*) &gpuCmdBuf[gpuCmdBufOffset + 2 * i + 0]) = arr[i].all;
+		*((gpucmd_single_t*) &gpuCmdBuf[gpuCmdBufOffset + 2 * i]) = arr[i]; // Struct copy
 	}
 
 	gpuCmdBufOffset += count * 2;
