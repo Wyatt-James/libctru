@@ -165,14 +165,14 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 		if(GPUCMD_LIKELY(param))
 		{
 			#pragma GCC unroll 6
-			for (int i = 0; i < paramlength; i++) {
+			for (u32 i = 0; i < paramlength; i++) {
 				gpuCmdBuf[offset + i] = param[1 + i];
 			}
 		}
 		else
 		{
 			#pragma GCC unroll 6
-			for (int i = 0; i < paramlength; i++) {
+			for (u32 i = 0; i < paramlength; i++) {
 				gpuCmdBuf[offset + i] = 0;
 			}
 		}
