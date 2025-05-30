@@ -45,6 +45,7 @@ INCLUDES	:=	include
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
 GPUCMD_DISABLE_BOUNDS_CHECKS	:=	0
+GPUCMD_ENABLE_ZERO_PADDING	:=	0
 GPUCMD_INLINE_THRESH	:=	6
 
 CFLAGS	:=	-g -Wall -Werror -mword-relocations \
@@ -57,6 +58,7 @@ CFLAGS	+=	-save-temps=obj
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__
 
+# If enabled, the GPU driver will not avoid overrunning its command buffer.
 ifeq ($(GPUCMD_DISABLE_BOUNDS_CHECKS),1)
 $(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined calls inside other projects.)
 CFLAGS	+=	-DCTRU_GPUCMD_DISABLE_BOUNDS_CHECKS
@@ -64,13 +66,15 @@ else
 $(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
+# If enabled, GPU commands of odd lengths will be padded with zeros. If disabled, the padding is undefined.
 ifeq ($(GPUCMD_ENABLE_ZERO_PADDING),1)
-$(info GPUCMD Zero-Padding is enabled.)
+$(info GPUCMD Zero-Padding is enabled. Note that this does NOT affect inlined calls inside other projects.)
 CFLAGS	+=	-DGPUCMD_ENABLE_ZERO_PADDING
 else
-$(info GPUCMD Zero-Padding is disabled.)
+$(info GPUCMD Zero-Padding is disabled. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
+# Allows certain GPU driver functions to automatically inline if they are smaller than the given threshold.
 $(info GPUCMD Inline Threshold is $(GPUCMD_INLINE_THRESH).)
 CFLAGS	+=	-DGPUCMD_INLINE_THRESH=$(GPUCMD_INLINE_THRESH)
 
