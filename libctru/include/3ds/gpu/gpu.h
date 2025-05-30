@@ -178,8 +178,12 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 		}
 	}
 
+	
+#ifdef GPUCMD_ENABLE_ZERO_PADDING
+	if(paramlength&1) gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
+#else
 	gpuCmdBufOffset = offset + paramlength + (paramlength & 1); // Add LSB twice for alignment
-	// if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
+#endif
 }
 
 // Don't use me. Use the macros instead.

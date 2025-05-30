@@ -64,6 +64,13 @@ else
 $(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
+ifeq ($(GPUCMD_ENABLE_ZERO_PADDING),1)
+$(info GPUCMD Zero-Padding is enabled.)
+CFLAGS	+=	-DGPUCMD_ENABLE_ZERO_PADDING
+else
+$(info GPUCMD Zero-Padding is disabled.)
+endif
+
 $(info GPUCMD Inline Threshold is $(GPUCMD_INLINE_THRESH).)
 CFLAGS	+=	-DGPUCMD_INLINE_THRESH=$(GPUCMD_INLINE_THRESH)
 
