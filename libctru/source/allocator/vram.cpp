@@ -138,3 +138,18 @@ u32 vramSpaceFree()
 {
 	return sVramPoolA.GetFreeSpace() + sVramPoolB.GetFreeSpace();
 }
+
+u32 vramBankSpaceFree(vramAllocPos pos)
+{
+	switch (pos)
+	{
+		case VRAM_ALLOC_A:
+			return sVramPoolA.GetFreeSpace();
+		case VRAM_ALLOC_B:
+			return sVramPoolB.GetFreeSpace();
+		case VRAM_ALLOC_ANY:
+			return vramSpaceFree();
+		default:
+			return 0;
+	}
+}

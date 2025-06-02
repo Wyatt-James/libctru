@@ -69,3 +69,10 @@ void vramFree(void* mem);
  * @return The current VRAM free space.
  */
 u32 vramSpaceFree(void);
+
+/**
+ * @brief Gets the current free space in the given VRAM bank.
+ * @param pos VRAM bank to check (see \ref vramAllocPos). If VRAM_ALLOC_ANY is specified, returns the total of both banks.
+ * @return The current free space in the given VRAM bank, or 0 if an invalid bank is specified.
+ */
+u32 vramBankSpaceFree(vramAllocPos pos);
