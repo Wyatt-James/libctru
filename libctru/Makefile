@@ -47,6 +47,7 @@ ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 GPUCMD_DISABLE_BOUNDS_CHECKS	:=	0
 GPUCMD_ENABLE_ZERO_PADDING	:=	0
 GPUCMD_INLINE_THRESH	:=	6
+ENABLE_LTO	:=	0
 
 CFLAGS	:=	-g -Wall -Werror -mword-relocations \
 			-ffunction-sections \
@@ -72,6 +73,14 @@ $(info GPUCMD Zero-Padding is enabled. Note that this does NOT affect inlined ca
 CFLAGS	+=	-DGPUCMD_ENABLE_ZERO_PADDING
 else
 $(info GPUCMD Zero-Padding is disabled. Note that this does NOT affect inlined calls inside other projects.)
+endif
+
+# Enable link-time optimization
+ifeq ($(ENABLE_LTO),1)
+$(info Link-time Optimization is enabled.)
+CFLAGS	+=	-flto
+else
+$(info Link-time Optimization is disabled.)
 endif
 
 # Allows certain GPU driver functions to automatically inline if they are smaller than the given threshold.
