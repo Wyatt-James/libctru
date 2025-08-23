@@ -118,7 +118,7 @@ u32 f32tof31(float f);
 // Wrapper for svcBreak(USERBREAK_PANIC). Used to avoid including 3ds/svc.h in gpu.h.
 void GPUCMD_SvcBreakUserPanicWrapper();
 
-static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[count])
+static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[])
 {
 #ifndef CTRU_GPUCMD_DISABLE_BOUNDS_CHECKS
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize)) {
