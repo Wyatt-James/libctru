@@ -138,7 +138,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	gpucmd_single_t cmds[1] = {{param, header}};
+	gpucmd_single_t cmds[1] = {{{param, header}}};
 	GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(cmds), cmds);
 }
 
