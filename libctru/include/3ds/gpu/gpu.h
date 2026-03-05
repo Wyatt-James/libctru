@@ -22,7 +22,7 @@ typedef union
 {
 	struct {
 		u32 param, header;
-	};
+	} parts;
 	u64 all;
 } gpucmd_single_t;
 
@@ -203,7 +203,7 @@ static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramleng
 }
 
 /// Constructs a masked gpucmd_single_t.
-#define GPUCMD_MaskedSingle(reg, mask, val) ((gpucmd_single_t) {.header = GPUCMD_HEADER(0, (mask), (reg)), .param = (val)})
+#define GPUCMD_MaskedSingle(reg, mask, val) ((gpucmd_single_t) {{(val), GPUCMD_HEADER(0, (mask), (reg))}})
 /// Constructs a gpucmd_single_t.
 #define GPUCMD_Single(reg, val) GPUCMD_MaskedSingle((reg), 0xF, (val))
 
