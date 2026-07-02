@@ -16,8 +16,8 @@ It is not meant to provide higher level functions; to put things in perspective,
 - The following build flags were added to the Makefile:
   - `GPUCMD_ENABLE_BOUNDS_CHECKS (Default 1)`: If 1, the GPU driver will avoid exceeding the bounds of its buffer. If 0, this functionality is disabled. Disabling this can cause memory corruption if the buffer is not large enough! See Footnote 2.
   - `GPUCMD_ENABLE_ZERO_PADDING (Default 0)`: If 1, the GPU driver will pad odd-sized GPU commands with zeroes, mirroring stock libctru behavior. If 0, commands are still aligned, but padding data is not zeroed. This seems to be safe and improves performance. See Footnote 2.
-  - `GPUCMD_INLINE_THRESH (Default 6)`: adjusts the auto-inline threshold for applicable GPU driver calls. Writes smaller or equal to this number are inlined to improve performance. Set to -1 to disable. See Footnote 1.
-  - `ENABLE_LTO (Default 0)`: enables building libctru itself with LTO.
+  - `GPUCMD_INLINE_THRESH (Default 6)`: Adjusts the auto-inline threshold for applicable GPU driver calls. Writes smaller or equal to this number are inlined to improve performance. Set to -1 to disable. See Footnote 1.
+  - `ENABLE_LTO (Default 0)`: Enables building libctru itself with LTO.
 
 Footnote 1: This flag affects a header file with inline functions. Because these inline functions are compiled
 wherever they are called and NOT necessarily just within libctru, this value must also be set by your project, whether that be in your makefile or defined in the file itself. Care should be taken to keep this flag synchronized across all separate compilations in your project.
