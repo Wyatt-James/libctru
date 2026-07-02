@@ -44,7 +44,7 @@ INCLUDES	:=	include
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
-GPUCMD_DISABLE_BOUNDS_CHECKS	:=	0
+GPUCMD_ENABLE_BOUNDS_CHECKS	:=	1
 GPUCMD_ENABLE_ZERO_PADDING	:=	0
 GPUCMD_INLINE_THRESH	:=	6
 ENABLE_LTO	:=	0
@@ -60,11 +60,11 @@ CFLAGS	+=	-save-temps=obj
 CFLAGS	+=	$(INCLUDE) -D__3DS__
 
 # If enabled, the GPU driver will not avoid overrunning its command buffer.
-ifeq ($(GPUCMD_DISABLE_BOUNDS_CHECKS),1)
-$(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined calls inside other projects.)
-CFLAGS	+=	-DCTRU_GPUCMD_DISABLE_BOUNDS_CHECKS
-else
+ifeq ($(GPUCMD_ENABLE_BOUNDS_CHECKS),1)
 $(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
+CFLAGS	+=	-DGPUCMD_ENABLE_BOUNDS_CHECKS
+else
+$(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
 # If enabled, GPU commands of odd lengths will be padded with zeros. If disabled, the padding is undefined.

@@ -14,9 +14,9 @@ It is not meant to provide higher level functions; to put things in perspective,
 - The PICA200 GPU driver in gpu.h/gpu.c has been significantly optimized and is now configurable at build time.
 - VRAM.h has an additional function to query free space per-bank.
 - The following build flags were added to the Makefile:
-  - `GPUCMD_DISABLE_BOUNDS_CHECKS (Default 0, checks enabled)`: If 1, disables bounds checking in the GPU driver. This can cause memory corruption if the queue is not large enough! This affects gpu.h and gpu.c. See Footnote 2.
-  - `GPUCMD_ENABLE_ZERO_PADDING (Default 0, padding not zeroed)`: If 1, pads odd-sized GPU commands with zeroes, mirroring stock libctru behavior. Disabling this still aligns commands, but padding data is not zeroed. This seems to be safe and improves performance. This affects gpu.h and gpu.c. See Footnote 2.
-  - `GPUCMD_INLINE_THRESH (Default 6)`: adjusts the auto-inline threshold for applicable GPU driver calls. Writes smaller or equal to this number are inlined to improve performance. Set to -1 to disable. This affects only gpu.h. See Footnote 1.
+  - `GPUCMD_ENABLE_BOUNDS_CHECKS (Default 1)`: If 1, the GPU driver will avoid exceeding the bounds of its buffer. If 0, this functionality is disabled. Disabling this can cause memory corruption if the buffer is not large enough! See Footnote 2.
+  - `GPUCMD_ENABLE_ZERO_PADDING (Default 0)`: If 1, the GPU driver will pad odd-sized GPU commands with zeroes, mirroring stock libctru behavior. If 0, commands are still aligned, but padding data is not zeroed. This seems to be safe and improves performance. See Footnote 2.
+  - `GPUCMD_INLINE_THRESH (Default 6)`: adjusts the auto-inline threshold for applicable GPU driver calls. Writes smaller or equal to this number are inlined to improve performance. Set to -1 to disable. See Footnote 1.
   - `ENABLE_LTO (Default 0)`: enables building libctru itself with LTO.
 
 Footnote 1: This flag affects a header file with inline functions. Because these inline functions are compiled
@@ -27,6 +27,7 @@ Footnote 2: This flag affects both header files with inline functions and source
 # How to Modify Your Codebase for This Fork
 
 No breaking changes have been made, so existing projects should build without issue.
+
 To achieve the best performance, you should:
 - Replace small GPUCMD_Add calls with their inline versions or try the auto versions.
 - Find out how big your project's GPU command lists actually are, ensure that buffers are large enough, and disable GPUCMD bounds checks.
