@@ -142,7 +142,7 @@ static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 	GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(cmds), cmds);
 }
 
-// Don't use me. Use the macros instead.
+/// Don't use me. Use the macros instead.
 static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
 {
 #ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
@@ -187,19 +187,18 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 #endif
 }
 
-// Don't use me. Use the macros instead.
+/// Don't use me. Use the macros instead.
 static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramlength)
 {
 	if(!paramlength)paramlength=1;
 
-	while(paramlength)
-	{
+	do {
 		u32 remaining = paramlength > 0x100 ? 0x100 : paramlength;
 		GPUCMD_AddInternal_Inline(header, param, remaining);
 		param += remaining;
 		paramlength -= remaining;
 		if(header & BIT(31)) header += remaining;
-	}
+	} while(GPUCMD_UNLIKELY(paramlength));
 }
 
 /// Constructs a masked gpucmd_single_t.
