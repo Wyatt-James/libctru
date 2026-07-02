@@ -120,7 +120,7 @@ void GPUCMD_SvcBreakUserPanicWrapper();
 
 static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[])
 {
-#ifdef GPUCMD_ENABLE_BOUNDS_CHECKS
+#ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 		return;
@@ -145,7 +145,7 @@ static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 // Don't use me. Use the macros instead.
 static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
 {
-#ifdef GPUCMD_ENABLE_BOUNDS_CHECKS
+#ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 		return;
