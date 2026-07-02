@@ -44,13 +44,48 @@ INCLUDES	:=	include
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
+GPUCMD_ENABLE_BOUNDS_CHECKS	:=	1
+GPUCMD_ENABLE_ZERO_PADDING	:=	0
+GPUCMD_INLINE_THRESH	:=	6
+ENABLE_LTO	:=	0
+
 CFLAGS	:=	-g -Wall -Werror -mword-relocations \
 			-ffunction-sections \
 			-fdata-sections \
 			$(ARCH) \
 			$(BUILD_CFLAGS)
+			
+CFLAGS	+=	-save-temps=obj
 
 CFLAGS	+=	$(INCLUDE) -D__3DS__
+
+# If enabled, the GPU driver will not avoid overrunning its command buffer.
+ifeq ($(GPUCMD_ENABLE_BOUNDS_CHECKS),1)
+$(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
+CFLAGS	+=	-DGPUCMD_ENABLE_BOUNDS_CHECKS
+else
+$(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined calls inside other projects.)
+endif
+
+# If enabled, GPU commands of odd lengths will be padded with zeros. If disabled, the padding is undefined.
+ifeq ($(GPUCMD_ENABLE_ZERO_PADDING),1)
+$(info GPUCMD Zero-Padding is enabled. Note that this does NOT affect inlined calls inside other projects.)
+CFLAGS	+=	-DGPUCMD_ENABLE_ZERO_PADDING
+else
+$(info GPUCMD Zero-Padding is disabled. Note that this does NOT affect inlined calls inside other projects.)
+endif
+
+# Enable link-time optimization
+ifeq ($(ENABLE_LTO),1)
+$(info Link-time Optimization is enabled.)
+CFLAGS	+=	-flto
+else
+$(info Link-time Optimization is disabled.)
+endif
+
+# Allows certain GPU driver functions to automatically inline if they are smaller than the given threshold.
+$(info GPUCMD Inline Threshold is $(GPUCMD_INLINE_THRESH).)
+CFLAGS	+=	-DGPUCMD_INLINE_THRESH=$(GPUCMD_INLINE_THRESH)
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 

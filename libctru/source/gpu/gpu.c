@@ -24,24 +24,33 @@ void GPUCMD_AddRawCommands(const u32* cmd, u32 size)
 
 static void GPUCMD_AddInternal(u32 header, const u32* param, u32 paramlength)
 {
-	if(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)
+#ifdef GPUCMD_ENABLE_BOUNDS_CHECKS
+	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
 		svcBreak(USERBREAK_PANIC); // Shouldn't happen.
+		return;
+	}
+#endif
 
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
 
-	gpuCmdBuf[gpuCmdBufOffset]=param ? param[0] : 0;
-	gpuCmdBuf[gpuCmdBufOffset+1]=header;
+	u32 offset = gpuCmdBufOffset;
 
-	if(paramlength)
+	gpuCmdBuf[offset++]=param ? param[0] : 0;
+	gpuCmdBuf[offset++]=header;
+
+	if(GPUCMD_LIKELY(paramlength))
 	{
-		if(param)memcpy(&gpuCmdBuf[gpuCmdBufOffset+2], &param[1], paramlength*4);
-		else     memset(&gpuCmdBuf[gpuCmdBufOffset+2], 0, paramlength*4);
+		if(GPUCMD_LIKELY(param))memcpy(&gpuCmdBuf[offset], &param[1], paramlength*4);
+		else                    memset(&gpuCmdBuf[offset],         0, paramlength*4);
 	}
 
-	gpuCmdBufOffset+=paramlength+2;
-
-	if(paramlength&1)gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
+#ifdef GPUCMD_ENABLE_ZERO_PADDING
+	gpuCmdBufOffset = offset + paramlength;
+	if(paramlength&1) gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
+#else
+	gpuCmdBufOffset = offset + paramlength + (paramlength & 1); // Add LSB twice for alignment
+#endif
 }
 
 void GPUCMD_Add(u32 header, const u32* param, u32 paramlength)
@@ -198,4 +207,10 @@ u32 f32tof31(float f)
 	}
 
 	return sign << 30 | exponent << 23 | mantissa;
+}
+
+// Used to avoid including 3ds/svc.h in gpu.h
+void GPUCMD_SvcBreakUserPanicWrapper()
+{
+	svcBreak(USERBREAK_PANIC);
 }
