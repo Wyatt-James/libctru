@@ -81,7 +81,7 @@ PrintConsole* consoleGetDefault(void){return &defaultConsole;}
 
 void consolePrintChar(int c);
 void consoleDrawChar(int c);
-static void consoleDrawBlank(void);
+static void consoleDrawBlank(u16 bg);
 
 //---------------------------------------------------------------------------------
 static void consoleCls(int mode) {
@@ -801,37 +801,12 @@ static void newRow() {
 }
 
 // Special fast case to draw a blank char, supporting underline and crossout
-static void consoleDrawBlank(void) {
-	u16 fg = currentConsole->fg;
-	u16 bg = currentConsole->bg;
-
-	if (!(currentConsole->flags & CONSOLE_FG_CUSTOM)) {
-		if (currentConsole->flags & CONSOLE_COLOR_BOLD) {
-			fg = colorTable[fg + 8];
-		} else if (currentConsole->flags & CONSOLE_COLOR_FAINT) {
-			fg = colorTable[fg + 16];
-		} else {
-			fg = colorTable[fg];
-		}
-	}
-
-	if (!(currentConsole->flags & CONSOLE_BG_CUSTOM)) {
-		bg = colorTable[bg];
-	}
-
-	if (currentConsole->flags & CONSOLE_COLOR_REVERSE) {
-		u16 tmp = fg;
-		fg = bg;
-		bg = tmp;
-	}
-
-	u16 col_underline = bg;
+static void consoleDrawBlank(u16 bg) {
 	u16 col_crossed_out = bg;
-
-	if (currentConsole->flags & CONSOLE_UNDERLINE) col_underline = fg;
-
-	if (currentConsole->flags & CONSOLE_CROSSED_OUT) col_crossed_out = fg;
-
+	u16 col_underline = bg;
+	
+	if (currentConsole->flags & CONSOLE_UNDERLINE) col_underline = 0xff;
+	if (currentConsole->flags & CONSOLE_CROSSED_OUT) col_crossed_out = 0xff;
 
 	int i;
 
@@ -859,11 +834,6 @@ void consoleDrawChar(int c) {
 
 	c -= currentConsole->font.asciiOffset;
 	if ( c < 0 || c > currentConsole->font.numChars ) return;
-	
-	if (c == ' ' && currentConsole->font.spaceIsBlank) {
-		consoleDrawBlank();
-		return;
-	}
 
 	u8 *fontdata = currentConsole->font.gfx + (8 * c);
 
@@ -888,6 +858,11 @@ void consoleDrawChar(int c) {
 		u16 tmp = fg;
 		fg = bg;
 		bg = tmp;
+	}
+	
+	if (c == ' ' && currentConsole->font.spaceIsBlank) {
+		consoleDrawBlank(bg);
+		return;
 	}
 
 	u8 b1 = *(fontdata++);
