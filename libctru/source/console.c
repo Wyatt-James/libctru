@@ -53,7 +53,8 @@ PrintConsole defaultConsole =
 	{
 		(u8*)default_font_bin, //font gfx
 		0, //first ascii character in the set
-		256 //number of characters in the font set
+		256, //number of characters in the font set
+		true //space is blank
 	},
 	(u16*)NULL,
 	0,0,	//cursorX cursorY
@@ -80,6 +81,7 @@ PrintConsole* consoleGetDefault(void){return &defaultConsole;}
 
 void consolePrintChar(int c);
 void consoleDrawChar(int c);
+static void consoleDrawBlank(void);
 
 //---------------------------------------------------------------------------------
 static void consoleCls(int mode) {
@@ -130,7 +132,6 @@ static void consoleCls(int mode) {
 			break;
 		}
 	}
-	gfxFlushBuffers();
 }
 //---------------------------------------------------------------------------------
 static void consoleClearLine(int mode) {
@@ -182,7 +183,6 @@ static void consoleClearLine(int mode) {
 			break;
 		}
 	}
-	gfxFlushBuffers();
 }
 
 
@@ -656,6 +656,7 @@ ssize_t con_write(struct _reent *r,void *fd,const char *ptr, size_t len) {
 			}
 	}
 
+	gfxFlushBuffers();
 	return count;
 }
 
@@ -742,6 +743,7 @@ PrintConsole* consoleInit(gfxScreen_t screen, PrintConsole* console) {
 	}
 
 	consoleCls(2);
+	gfxFlushBuffers();
 
 	return currentConsole;
 
@@ -814,11 +816,71 @@ static void newRow() {
 		consoleClearLine(2);
 	}
 }
+
+// Special fast case to draw a blank char, supporting underline and crossout
+static void consoleDrawBlank(void) {
+	u16 fg = currentConsole->fg;
+	u16 bg = currentConsole->bg;
+
+	if (!(currentConsole->flags & CONSOLE_FG_CUSTOM)) {
+		if (currentConsole->flags & CONSOLE_COLOR_BOLD) {
+			fg = colorTable[fg + 8];
+		} else if (currentConsole->flags & CONSOLE_COLOR_FAINT) {
+			fg = colorTable[fg + 16];
+		} else {
+			fg = colorTable[fg];
+		}
+	}
+
+	if (!(currentConsole->flags & CONSOLE_BG_CUSTOM)) {
+		bg = colorTable[bg];
+	}
+
+	if (currentConsole->flags & CONSOLE_COLOR_REVERSE) {
+		u16 tmp = fg;
+		fg = bg;
+		bg = tmp;
+	}
+
+	u16 col_underline = bg;
+	u16 col_crossed_out = bg;
+
+	if (currentConsole->flags & CONSOLE_UNDERLINE) col_underline = fg;
+
+	if (currentConsole->flags & CONSOLE_CROSSED_OUT) col_crossed_out = fg;
+
+
+	int i;
+
+	int x = (currentConsole->cursorX + currentConsole->windowX) * 8;
+	int y = ((currentConsole->cursorY + currentConsole->windowY) *8 );
+
+	u16 *screen = &currentConsole->frameBuffer[(x * 240) + (239 - (y + 7))];
+
+	for (i=0;i<8;i++) {
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = col_crossed_out;
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = col_underline;
+		screen += 240 - 8;
+	}
+}
+
 //---------------------------------------------------------------------------------
 void consoleDrawChar(int c) {
 //---------------------------------------------------------------------------------
+
 	c -= currentConsole->font.asciiOffset;
 	if ( c < 0 || c > currentConsole->font.numChars ) return;
+	
+	if (c == ' ' && currentConsole->font.spaceIsBlank) {
+		consoleDrawBlank();
+		return;
+	}
 
 	u8 *fontdata = currentConsole->font.gfx + (8 * c);
 
@@ -908,7 +970,7 @@ void consolePrintChar(int c) {
 		Reason: VT sequences are more specific to the task of cursor placement.
 		The special escape sequences \b \f & \v are archaic and non-portable.
 		*/
-		case 8:
+		case 8:  // Backspace
 			currentConsole->cursorX--;
 
 			if(currentConsole->cursorX < 0) {
@@ -923,14 +985,13 @@ void consolePrintChar(int c) {
 			consoleDrawChar(' ');
 			break;
 
-		case 9:
+		case 9:  // '\t'
 			currentConsole->cursorX  += currentConsole->tabSize - ((currentConsole->cursorX)%(currentConsole->tabSize));
 			break;
-		case 10:
+		case 10: // '\n'
 			newRow();
-		case 13:
+		case 13: // '\r'
 			currentConsole->cursorX  = 0;
-			gfxFlushBuffers();
 			break;
 		default:
 			consoleDrawChar(c);
@@ -943,6 +1004,7 @@ void consolePrintChar(int c) {
 void consoleClear(void) {
 //---------------------------------------------------------------------------------
 	consoleCls(2);
+	gfxFlushBuffers();
 }
 
 //---------------------------------------------------------------------------------

@@ -40,9 +40,10 @@ typedef bool(*ConsolePrint)(void* con, int c);
 /// A font struct for the console.
 typedef struct ConsoleFont
 {
-	u8* gfx;         ///< A pointer to the font graphics
-	u16 asciiOffset; ///< Offset to the first valid character in the font table
-	u16 numChars;    ///< Number of characters in the font graphics
+	u8* gfx;           ///< A pointer to the font graphics
+	u16 asciiOffset;   ///< Offset to the first valid character in the font table
+	u16 numChars;      ///< Number of characters in the font graphics
+	bool spaceIsBlank; ///< If true, the space character's actual graphics data will be ignored and it will be drawn in an optimized way
 }ConsoleFont;
 
 /**
