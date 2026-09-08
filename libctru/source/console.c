@@ -88,101 +88,84 @@ static void consoleCls(int mode) {
 //---------------------------------------------------------------------------------
 
 	int i = 0;
+	int dst;
 	int colTemp,rowTemp;
 
 	switch (mode)
 	{
 		case 0:
 		{
-			colTemp = currentConsole->cursorX ;
-			rowTemp = currentConsole->cursorY ;
-
-			while(i++ < ((currentConsole->windowHeight * currentConsole->windowWidth) - (rowTemp * currentConsole->consoleWidth + colTemp)))
-				consolePrintChar(' ');
-
-			currentConsole->cursorX  = colTemp;
-			currentConsole->cursorY  = rowTemp;
+			colTemp = currentConsole->cursorX;
+			rowTemp = currentConsole->cursorY;
+			dst = (currentConsole->windowHeight * currentConsole->windowWidth) - (rowTemp * currentConsole->consoleWidth + colTemp);
 			break;
 		}
 		case 1:
 		{
-			colTemp = currentConsole->cursorX ;
-			rowTemp = currentConsole->cursorY ;
-
-			currentConsole->cursorY  = 0;
+			colTemp = currentConsole->cursorX;
+			rowTemp = currentConsole->cursorY;
+			dst = rowTemp * currentConsole->windowWidth + colTemp;
 			currentConsole->cursorX  = 0;
-
-			while (i++ < (rowTemp * currentConsole->windowWidth + colTemp))
-				consolePrintChar(' ');
-
-			currentConsole->cursorX  = colTemp;
-			currentConsole->cursorY  = rowTemp;
+			currentConsole->cursorY  = 0;
 			break;
 		}
 		case 2:
 		{
-			currentConsole->cursorY  = 0;
+			colTemp = 0;
+			rowTemp = 0;
+			dst = currentConsole->windowHeight * currentConsole->windowWidth;
 			currentConsole->cursorX  = 0;
-
-			while(i++ < currentConsole->windowHeight * currentConsole->windowWidth)
-				consolePrintChar(' ');
-
 			currentConsole->cursorY  = 0;
-			currentConsole->cursorX  = 0;
 			break;
 		}
+		default:
+			return;
 	}
+
+	while(i++ < dst)
+		consolePrintChar(' ');
+
+	currentConsole->cursorX  = colTemp;
+	currentConsole->cursorY  = rowTemp;
 }
 //---------------------------------------------------------------------------------
 static void consoleClearLine(int mode) {
 //---------------------------------------------------------------------------------
 
 	int i = 0;
+	int dst;
 	int colTemp;
 
 	switch (mode)
 	{
 		case 0:
 		{
-			colTemp = currentConsole->cursorX ;
-
-			while(i++ < (currentConsole->windowWidth - colTemp)) {
-				consolePrintChar(' ');
-			}
-
-			currentConsole->cursorX  = colTemp;
-
+			colTemp = currentConsole->cursorX;
+			dst = currentConsole->windowWidth - colTemp;
 			break;
 		}
 		case 1:
 		{
-			colTemp = currentConsole->cursorX ;
-
+			colTemp = currentConsole->cursorX;
+			dst = (currentConsole->windowWidth - colTemp)-2;
 			currentConsole->cursorX  = 0;
-
-			while(i++ < ((currentConsole->windowWidth - colTemp)-2)) {
-				consolePrintChar(' ');
-			}
-
-			currentConsole->cursorX  = colTemp;
-
 			break;
 		}
 		case 2:
 		{
-			colTemp = currentConsole->cursorX ;
-
+			colTemp = currentConsole->cursorX;
+			dst = currentConsole->windowWidth;
 			currentConsole->cursorX  = 0;
-
-			while(i++ < currentConsole->windowWidth) {
-				consolePrintChar(' ');
-			}
-
-			currentConsole->cursorX  = colTemp;
-
 			break;
 		}
+		default:
+			return;
 	}
+
+	while(i++ < dst)
+		consolePrintChar(' ');
+
+	currentConsole->cursorX = colTemp;
 }
 
 
