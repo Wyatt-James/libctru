@@ -45,6 +45,7 @@ INCLUDES	:=	include
 ARCH	:=	-march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 
 GPUCMD_DISABLE_BOUNDS_CHECKS	:=	0
+GPUCMD_ASSUME_WRITES_ALIGNED	:=	0
 GPUCMD_ENABLE_ZERO_PADDING	:=	0
 GPUCMD_INLINE_THRESH	:=	6
 ENABLE_LTO	:=	0
@@ -65,6 +66,14 @@ $(info GPUCMD bounds checks are disabled. Note that this does NOT affect inlined
 CFLAGS	+=	-DGPUCMD_DISABLE_BOUNDS_CHECKS
 else
 $(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
+endif
+
+# If enabled, the GPU driver will assume that the GPUCMD and its offset are always 8-byte aligned.
+ifeq ($(GPUCMD_ASSUME_WRITES_ALIGNED),1)
+$(info GPUCMD writes are assumed aligned. Note that this does NOT affect inlined calls inside other projects.)
+CFLAGS	+=	-DGPUCMD_ASSUME_WRITES_ALIGNED
+else
+$(info GPUCMD writes are assumed unaligned. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
 # If enabled, GPU commands of odd lengths will be padded with zeros. If disabled, the padding is undefined.
