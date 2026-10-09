@@ -132,11 +132,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, u64* src)
 	u32* dst = gpuCmdBuf + gpuCmdBufOffset;
 	gpuCmdBufOffset += count * 2;
 
-	#pragma GCC unroll 32
-	while (count-- > 0) {
-		memcpy(GPUCMD_ASSUME_DST_ALIGNED(dst), src++, sizeof(u64));
-		dst += 2;
-	}
+	memcpy(GPUCMD_ASSUME_DST_ALIGNED(dst), src, count * sizeof(u64));
 }
 
 /// Adds a command with a single parameter to the current command buffer.
