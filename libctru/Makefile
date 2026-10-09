@@ -68,7 +68,7 @@ else
 $(info GPUCMD bounds checks are enabled. Note that this does NOT affect inlined calls inside other projects.)
 endif
 
-# If enabled, the GPU driver will assume that the GPUCMD and its offset are always 8-byte aligned.
+# If enabled, the GPU driver will assume that the GPUCMD buffer and its offset are always 8-byte aligned.
 ifeq ($(GPUCMD_ASSUME_WRITES_ALIGNED),1)
 $(info GPUCMD writes are assumed aligned. Note that this does NOT affect inlined calls inside other projects.)
 CFLAGS	+=	-DGPUCMD_ASSUME_WRITES_ALIGNED
