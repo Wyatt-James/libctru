@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <string.h>
+
 #include "registers.h"
 #include "enums.h"
 
