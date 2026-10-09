@@ -19,7 +19,7 @@
 #define GPUCMD_LIKELY(cond_)                  __builtin_expect(!!(cond_), 1)
 #define GPUCMD_IS_CONSTEXPR(expr_)            __builtin_constant_p(expr_)
 #define GPUCMD_ARRAY_COUNT(arr_)              (size_t) (sizeof(arr_) / sizeof(arr_[0]))
-#define GPUCMD_PACK_U64(top, bottom) ((((u64) (u32) (top)) << 32) | (u32) (bottom))
+#define GPUCMD_PACK_U64(top, bottom)          ((((u64) (u32) (top)) << 32) | (u32) (bottom))
 
 #ifdef GPUCMD_ASSUME_WRITES_ALIGNED
 #define GPUCMD_ASSUME_DST_ALIGNED(dst) __builtin_assume_aligned((dst), _Alignof(u64))
@@ -138,7 +138,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, u64* src)
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	u64 cmds[1] = {GPUCMD_PACK_U64(param, header)};
+	u64 cmds[1] = {GPUCMD_PACK_U64(header, param)};
 	GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(cmds), cmds);
 }
 
@@ -202,7 +202,7 @@ static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramleng
 }
 
 /// Constructs a masked GPUCMD
-#define GPUCMD_MaskedSingle(reg, mask, val) (GPUCMD_PACK_U64((val), GPUCMD_HEADER(0, (mask), (reg))))
+#define GPUCMD_MaskedSingle(reg, mask, val) (GPUCMD_PACK_U64(GPUCMD_HEADER(0, (mask), (reg)), (val)))
 /// Constructs a GPUCMD
 #define GPUCMD_Single(reg, val) GPUCMD_MaskedSingle((reg), 0xF, (val))
 
