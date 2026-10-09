@@ -135,6 +135,7 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, u64* src)
 	#pragma GCC unroll 32
 	while (count-- > 0) {
 		memcpy(GPUCMD_ASSUME_DST_ALIGNED(dst), src++, sizeof(u64));
+		dst += 2;
 	}
 }
 
