@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <string.h>
+
 #include "registers.h"
 #include "enums.h"
 
@@ -17,14 +19,14 @@
 #define GPUCMD_LIKELY(cond_)                  __builtin_expect(!!(cond_), 1)
 #define GPUCMD_IS_CONSTEXPR(expr_)            __builtin_constant_p(expr_)
 #define GPUCMD_ARRAY_COUNT(arr_)              (size_t) (sizeof(arr_) / sizeof(arr_[0]))
+#define GPUCMD_PACK_U64(top, bottom)          ((((u64) (u32) (top)) << 32) | (u32) (bottom))
 
-typedef union
-{
-	struct {
-		u32 param, header;
-	} parts;
-	u64 all;
-} gpucmd_single_t;
+#ifdef GPUCMD_ASSUME_WRITES_ALIGNED
+#define GPUCMD_ASSUME_DST_ALIGNED(dst) __builtin_assume_aligned((dst), _Alignof(u64))
+#else
+#define GPUCMD_ASSUME_DST_ALIGNED(dst) (dst)
+#endif
+
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
 extern u32 gpuCmdBufSize;   ///< GPU command buffer size.
@@ -118,7 +120,7 @@ u32 f32tof31(float f);
 // Wrapper for svcBreak(USERBREAK_PANIC). Used to avoid including 3ds/svc.h in gpu.h.
 void GPUCMD_SvcBreakUserPanicWrapper();
 
-static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t arr[])
+static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, u64* src)
 {
 #ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
 	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize)) {
@@ -127,18 +129,16 @@ static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, gpucmd_single_t ar
 	}
 #endif
 
-	#pragma GCC unroll 32
-	for (size_t i = 0; i < count; i++) {
-		*((u64*) &gpuCmdBuf[gpuCmdBufOffset + 2 * i]) = arr[i].all;
-	}
-
+	u32* dst = gpuCmdBuf + gpuCmdBufOffset;
 	gpuCmdBufOffset += count * 2;
+
+	memcpy(GPUCMD_ASSUME_DST_ALIGNED(dst), src, count * sizeof(u64));
 }
 
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	gpucmd_single_t cmds[1] = {{{param, header}}};
+	u64 cmds[1] = {GPUCMD_PACK_U64(header, param)};
 	GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(cmds), cmds);
 }
 
@@ -162,20 +162,13 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 
 	if(GPUCMD_LIKELY(paramlength))
 	{
+		// The alignment of param isn't easily solvable. Ideally, param[0] would be
+		// 32-bit aligned but NOT 64-bit aligned such that param[1] is 64-bit aligned,
+		// but that requires intelligent allocation.
 		if(GPUCMD_LIKELY(param))
-		{
-			#pragma GCC unroll 6
-			for (u32 i = 0; i < paramlength; i++) {
-				gpuCmdBuf[offset + i] = param[1 + i];
-			}
-		}
+			memcpy(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), param + 1, paramlength * sizeof(u32));
 		else
-		{
-			#pragma GCC unroll 6
-			for (u32 i = 0; i < paramlength; i++) {
-				gpuCmdBuf[offset + i] = 0;
-			}
-		}
+			memset(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), 0, paramlength * sizeof(u32));
 	}
 
 	
@@ -185,6 +178,27 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 #else
 	gpuCmdBufOffset = offset + paramlength + (paramlength & 1); // Add LSB twice for alignment
 #endif
+}
+
+/**
+ * @brief Adds raw GPU commands to the current command buffer.
+ * @param cmd Buffer containing commands to add.
+ * @param size Size of the buffer.
+ */
+static inline void GPUCMD_AddRawCommands_Inline(const u32* cmd, u32 size)
+{
+	if(GPUCMD_UNLIKELY(!cmd || !size))return;
+
+#ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
+	if(GPUCMD_UNLIKELY(gpuCmdBufOffset+size > gpuCmdBufSize)) {
+		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+		return;
+	}
+#endif
+
+	u32 offset = gpuCmdBufOffset;
+	gpuCmdBufOffset = offset + size;
+	memcpy(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), cmd, size*4);
 }
 
 /// Don't use me. Use the macros instead.
@@ -201,12 +215,12 @@ static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramleng
 	} while(GPUCMD_UNLIKELY(paramlength));
 }
 
-/// Constructs a masked gpucmd_single_t.
-#define GPUCMD_MaskedSingle(reg, mask, val) ((gpucmd_single_t) {{(val), GPUCMD_HEADER(0, (mask), (reg))}})
-/// Constructs a gpucmd_single_t.
+/// Constructs a masked GPUCMD
+#define GPUCMD_MaskedSingle(reg, mask, val) (GPUCMD_PACK_U64(GPUCMD_HEADER(0, (mask), (reg)), (val)))
+/// Constructs a GPUCMD
 #define GPUCMD_Single(reg, val) GPUCMD_MaskedSingle((reg), 0xF, (val))
 
-/// Adds a batch of gpucmd_single_t commands directly.
+/// Adds a batch of GPUCMD commands directly.
 #define GPUCMD_AddBatchOfSingles(arr) GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(arr), arr)
 /// Adds a masked register write to the current command buffer.
 #define GPUCMD_AddMaskedWrite(reg, mask, val) GPUCMD_AddSingleParam(GPUCMD_HEADER(0, (mask), (reg)), (val))
