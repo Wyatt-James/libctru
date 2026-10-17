@@ -53,7 +53,8 @@ PrintConsole defaultConsole =
 	{
 		(u8*)default_font_bin, //font gfx
 		0, //first ascii character in the set
-		256 //number of characters in the font set
+		256, //number of characters in the font set
+		true //space is blank
 	},
 	(u16*)NULL,
 	0,0,	//cursorX cursorY
@@ -80,109 +81,91 @@ PrintConsole* consoleGetDefault(void){return &defaultConsole;}
 
 void consolePrintChar(int c);
 void consoleDrawChar(int c);
+static void consoleDrawBlank(u16 bg);
 
 //---------------------------------------------------------------------------------
 static void consoleCls(int mode) {
 //---------------------------------------------------------------------------------
 
 	int i = 0;
+	int dst;
 	int colTemp,rowTemp;
 
 	switch (mode)
 	{
 		case 0:
 		{
-			colTemp = currentConsole->cursorX ;
-			rowTemp = currentConsole->cursorY ;
-
-			while(i++ < ((currentConsole->windowHeight * currentConsole->windowWidth) - (rowTemp * currentConsole->consoleWidth + colTemp)))
-				consolePrintChar(' ');
-
-			currentConsole->cursorX  = colTemp;
-			currentConsole->cursorY  = rowTemp;
+			colTemp = currentConsole->cursorX;
+			rowTemp = currentConsole->cursorY;
+			dst = (currentConsole->windowHeight * currentConsole->windowWidth) - (rowTemp * currentConsole->consoleWidth + colTemp);
 			break;
 		}
 		case 1:
 		{
-			colTemp = currentConsole->cursorX ;
-			rowTemp = currentConsole->cursorY ;
-
-			currentConsole->cursorY  = 0;
+			colTemp = currentConsole->cursorX;
+			rowTemp = currentConsole->cursorY;
+			dst = rowTemp * currentConsole->windowWidth + colTemp;
 			currentConsole->cursorX  = 0;
-
-			while (i++ < (rowTemp * currentConsole->windowWidth + colTemp))
-				consolePrintChar(' ');
-
-			currentConsole->cursorX  = colTemp;
-			currentConsole->cursorY  = rowTemp;
+			currentConsole->cursorY  = 0;
 			break;
 		}
 		case 2:
 		{
-			currentConsole->cursorY  = 0;
+			colTemp = 0;
+			rowTemp = 0;
+			dst = currentConsole->windowHeight * currentConsole->windowWidth;
 			currentConsole->cursorX  = 0;
-
-			while(i++ < currentConsole->windowHeight * currentConsole->windowWidth)
-				consolePrintChar(' ');
-
 			currentConsole->cursorY  = 0;
-			currentConsole->cursorX  = 0;
 			break;
 		}
+		default:
+			return;
 	}
-	gfxFlushBuffers();
+
+	while(i++ < dst)
+		consolePrintChar(' ');
+
+	currentConsole->cursorX  = colTemp;
+	currentConsole->cursorY  = rowTemp;
 }
 //---------------------------------------------------------------------------------
 static void consoleClearLine(int mode) {
 //---------------------------------------------------------------------------------
 
 	int i = 0;
+	int dst;
 	int colTemp;
 
 	switch (mode)
 	{
 		case 0:
 		{
-			colTemp = currentConsole->cursorX ;
-
-			while(i++ < (currentConsole->windowWidth - colTemp)) {
-				consolePrintChar(' ');
-			}
-
-			currentConsole->cursorX  = colTemp;
-
+			colTemp = currentConsole->cursorX;
+			dst = currentConsole->windowWidth - colTemp;
 			break;
 		}
 		case 1:
 		{
-			colTemp = currentConsole->cursorX ;
-
+			colTemp = currentConsole->cursorX;
+			dst = (currentConsole->windowWidth - colTemp)-2;
 			currentConsole->cursorX  = 0;
-
-			while(i++ < ((currentConsole->windowWidth - colTemp)-2)) {
-				consolePrintChar(' ');
-			}
-
-			currentConsole->cursorX  = colTemp;
-
 			break;
 		}
 		case 2:
 		{
-			colTemp = currentConsole->cursorX ;
-
+			colTemp = currentConsole->cursorX;
+			dst = currentConsole->windowWidth;
 			currentConsole->cursorX  = 0;
-
-			while(i++ < currentConsole->windowWidth) {
-				consolePrintChar(' ');
-			}
-
-			currentConsole->cursorX  = colTemp;
-
 			break;
 		}
+		default:
+			return;
 	}
-	gfxFlushBuffers();
+
+	while(i++ < dst)
+		consolePrintChar(' ');
+
+	currentConsole->cursorX = colTemp;
 }
 
 
@@ -656,6 +639,7 @@ ssize_t con_write(struct _reent *r,void *fd,const char *ptr, size_t len) {
 			}
 	}
 
+	gfxFlushBuffers();
 	return count;
 }
 
@@ -742,6 +726,7 @@ PrintConsole* consoleInit(gfxScreen_t screen, PrintConsole* console) {
 	}
 
 	consoleCls(2);
+	gfxFlushBuffers();
 
 	return currentConsole;
 
@@ -814,9 +799,39 @@ static void newRow() {
 		consoleClearLine(2);
 	}
 }
+
+// Special fast case to draw a blank char, supporting underline and crossout
+static void consoleDrawBlank(u16 bg) {
+	u16 col_crossed_out = bg;
+	u16 col_underline = bg;
+	
+	if (currentConsole->flags & CONSOLE_UNDERLINE) col_underline = 0xff;
+	if (currentConsole->flags & CONSOLE_CROSSED_OUT) col_crossed_out = 0xff;
+
+	int i;
+
+	int x = (currentConsole->cursorX + currentConsole->windowX) * 8;
+	int y = ((currentConsole->cursorY + currentConsole->windowY) *8 );
+
+	u16 *screen = &currentConsole->frameBuffer[(x * 240) + (239 - (y + 7))];
+
+	for (i=0;i<8;i++) {
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = col_crossed_out;
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = bg;
+		*(screen++) = col_underline;
+		screen += 240 - 8;
+	}
+}
+
 //---------------------------------------------------------------------------------
 void consoleDrawChar(int c) {
 //---------------------------------------------------------------------------------
+
 	c -= currentConsole->font.asciiOffset;
 	if ( c < 0 || c > currentConsole->font.numChars ) return;
 
@@ -843,6 +858,11 @@ void consoleDrawChar(int c) {
 		u16 tmp = fg;
 		fg = bg;
 		bg = tmp;
+	}
+	
+	if (c == ' ' && currentConsole->font.spaceIsBlank) {
+		consoleDrawBlank(bg);
+		return;
 	}
 
 	u8 b1 = *(fontdata++);
@@ -908,7 +928,7 @@ void consolePrintChar(int c) {
 		Reason: VT sequences are more specific to the task of cursor placement.
 		The special escape sequences \b \f & \v are archaic and non-portable.
 		*/
-		case 8:
+		case 8:  // Backspace
 			currentConsole->cursorX--;
 
 			if(currentConsole->cursorX < 0) {
@@ -923,14 +943,13 @@ void consolePrintChar(int c) {
 			consoleDrawChar(' ');
 			break;
 
-		case 9:
+		case 9:  // '\t'
 			currentConsole->cursorX  += currentConsole->tabSize - ((currentConsole->cursorX)%(currentConsole->tabSize));
 			break;
-		case 10:
+		case 10: // '\n'
 			newRow();
-		case 13:
+		case 13: // '\r'
 			currentConsole->cursorX  = 0;
-			gfxFlushBuffers();
 			break;
 		default:
 			consoleDrawChar(c);
@@ -943,6 +962,7 @@ void consolePrintChar(int c) {
 void consoleClear(void) {
 //---------------------------------------------------------------------------------
 	consoleCls(2);
+	gfxFlushBuffers();
 }
 
 //---------------------------------------------------------------------------------
