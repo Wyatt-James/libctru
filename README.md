@@ -15,6 +15,7 @@ It is not meant to provide higher level functions; to put things in perspective,
 - VRAM.h has an additional function to query free space per-bank.
 - The following build flags were added to the Makefile:
   - `GPUCMD_DISABLE_BOUNDS_CHECKS (Default 0)`: If 0, the GPU driver will avoid exceeding the bounds of its buffer. If 1, this functionality is disabled. Disabling this can cause memory corruption if the buffer is not large enough! See Footnote 2.
+  - `GPUCMD_ASSUME_WRITES_ALIGNED (Default 0):` If enabled, the GPU driver will assume that the GPUCMD buffer and its offset are always 8-byte aligned. Enabling this can improve performance but may crash the 3DS is an incorrect alignment is used, depending on what GCC decides to compile.
   - `GPUCMD_ENABLE_ZERO_PADDING (Default 0)`: If 1, the GPU driver will pad odd-sized GPU commands with zeroes, mirroring stock libctru behavior. If 0, commands are still aligned, but padding data is not zeroed. This seems to be safe and improves performance. See Footnote 2.
   - `GPUCMD_INLINE_THRESH (Default 6)`: Adjusts the auto-inline threshold for applicable GPU driver calls. Writes smaller or equal to this number are inlined to improve performance. Set to -1 to disable. See Footnote 1.
   - `ENABLE_LTO (Default 0)`: Enables building libctru itself with LTO.
