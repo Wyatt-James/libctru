@@ -162,20 +162,13 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 
 	if(GPUCMD_LIKELY(paramlength))
 	{
+		// The alignment of param isn't easily solvable. Ideally, param[0] would be
+		// 32-bit aligned but NOT 64-bit aligned such that param[1] is 64-bit aligned,
+		// but that requires intelligent allocation.
 		if(GPUCMD_LIKELY(param))
-		{
-			#pragma GCC unroll 6
-			for (u32 i = 0; i < paramlength; i++) {
-				gpuCmdBuf[offset + i] = param[1 + i];
-			}
-		}
+			memcpy(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), param + 1, paramlength * sizeof(u32));
 		else
-		{
-			#pragma GCC unroll 6
-			for (u32 i = 0; i < paramlength; i++) {
-				gpuCmdBuf[offset + i] = 0;
-			}
-		}
+			memset(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), 0, paramlength * sizeof(u32));
 	}
 
 	
