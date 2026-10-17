@@ -16,10 +16,7 @@ u32 gpuCmdBufOffset;
 
 void GPUCMD_AddRawCommands(const u32* cmd, u32 size)
 {
-	if(!cmd || !size)return;
-
-	memcpy(&gpuCmdBuf[gpuCmdBufOffset], cmd, size*4);
-	gpuCmdBufOffset+=size;
+	GPUCMD_AddRawCommands_Inline(cmd, size);
 }
 
 void GPUCMD_Add(u32 header, const u32* param, u32 paramlength)

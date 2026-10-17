@@ -180,6 +180,27 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 #endif
 }
 
+/**
+ * @brief Adds raw GPU commands to the current command buffer.
+ * @param cmd Buffer containing commands to add.
+ * @param size Size of the buffer.
+ */
+static inline void GPUCMD_AddRawCommands_Inline(const u32* cmd, u32 size)
+{
+	if(GPUCMD_UNLIKELY(!cmd || !size))return;
+
+#ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
+	if(GPUCMD_UNLIKELY(gpuCmdBufOffset+size > gpuCmdBufSize)) {
+		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
+		return;
+	}
+#endif
+
+	u32 offset = gpuCmdBufOffset;
+	gpuCmdBufOffset = offset + size;
+	memcpy(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), cmd, size*4);
+}
+
 /// Don't use me. Use the macros instead.
 static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramlength)
 {
