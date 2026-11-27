@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string.h>
+#include <stdint.h> // uintptr_t
 
 #include "registers.h"
 #include "enums.h"
@@ -20,6 +21,7 @@
 #define GPUCMD_IS_CONSTEXPR(expr_)            __builtin_constant_p(expr_)
 #define GPUCMD_ARRAY_COUNT(arr_)              (size_t) (sizeof(arr_) / sizeof(arr_[0]))
 #define GPUCMD_PACK_U64(top, bottom)          ((((u64) (u32) (top)) << 32) | (u32) (bottom))
+#define GPUCMD_HAS_SPACE(num_u32s) 			  (((uintptr_t) gpuCmdBufEnd - (uintptr_t) gpuCmdBufHead) >= ((num_u32s) * sizeof(u32)))
 
 #ifdef GPUCMD_ASSUME_WRITES_ALIGNED
 #define GPUCMD_ASSUME_DST_ALIGNED(dst) __builtin_assume_aligned((dst), _Alignof(u64))
@@ -29,8 +31,8 @@
 
 
 extern u32* gpuCmdBuf;      ///< GPU command buffer.
-extern u32 gpuCmdBufSize;   ///< GPU command buffer size.
-extern u32 gpuCmdBufOffset; ///< GPU command buffer offset.
+extern u32* gpuCmdBufHead;  ///< GPU command buffer's next free space.
+extern u32* gpuCmdBufEnd;   ///< GPU command buffer + size.
 
 /**
  * @brief Sets the GPU command buffer to use.
@@ -41,8 +43,8 @@ extern u32 gpuCmdBufOffset; ///< GPU command buffer offset.
 static inline void GPUCMD_SetBuffer(u32* adr, u32 size, u32 offset)
 {
 	gpuCmdBuf=adr;
-	gpuCmdBufSize=size;
-	gpuCmdBufOffset=offset;
+	gpuCmdBufEnd=gpuCmdBuf+size;
+	gpuCmdBufHead=gpuCmdBuf+offset;
 }
 
 /**
@@ -51,7 +53,7 @@ static inline void GPUCMD_SetBuffer(u32* adr, u32 size, u32 offset)
  */
 static inline void GPUCMD_SetBufferOffset(u32 offset)
 {
-	gpuCmdBufOffset=offset;
+	gpuCmdBufHead=gpuCmdBuf+offset;
 }
 
 /**
@@ -63,14 +65,14 @@ static inline void GPUCMD_SetBufferOffset(u32 offset)
 static inline void GPUCMD_GetBuffer(u32** addr, u32* size, u32* offset)
 {
 	if(addr)*addr=gpuCmdBuf;
-	if(size)*size=gpuCmdBufSize;
-	if(offset)*offset=gpuCmdBufOffset;
+	if(size)*size=gpuCmdBufEnd-gpuCmdBuf;
+	if(offset)*offset=gpuCmdBufHead-gpuCmdBuf;
 }
 
 /**
  * @brief Adds raw GPU commands to the current command buffer.
  * @param cmd Buffer containing commands to add.
- * @param size Size of the buffer.
+ * @param size Size of the buffer (in words).
  */
 void GPUCMD_AddRawCommands(const u32* cmd, u32 size);
 
@@ -78,14 +80,14 @@ void GPUCMD_AddRawCommands(const u32* cmd, u32 size);
  * @brief Adds a GPU command to the current command buffer.
  * @param header Header of the command.
  * @param param Parameters of the command.
- * @param paramlength Size of the parameter buffer.
+ * @param paramlength Size of the parameter buffer (in words).
  */
 void GPUCMD_Add(u32 header, const u32* param, u32 paramlength);
 
 /**
  * @brief Splits the current GPU command buffer.
- * @param addr Pointer to output the command buffer to.
- * @param size Pointer to output the size (in words) of the command buffer to.
+ * @param addr Pointer to output the command buffer to split.
+ * @param size Pointer to output the size (in words) of the command buffer to split.
  */
 void GPUCMD_Split(u32** addr, u32* size);
 
@@ -120,33 +122,39 @@ u32 f32tof31(float f);
 // Wrapper for svcBreak(USERBREAK_PANIC). Used to avoid including 3ds/svc.h in gpu.h.
 void GPUCMD_SvcBreakUserPanicWrapper();
 
-static inline void GPUCMD_AddBatchOfSingles_Int(size_t count, u64* src)
+/**
+ * @brief Adds raw GPU commands to the current command buffer.
+ * @param cmd Buffer containing commands to add.
+ * @param size Size of the buffer (in words).
+ */
+static inline void GPUCMD_AddRawCommands_Inline(const u32* cmd, u32 size)
 {
+	if(GPUCMD_UNLIKELY(!cmd || !size))return; // Not really needed
+
 #ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
-	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset + count * 2 > gpuCmdBufSize)) {
+	if(GPUCMD_UNLIKELY(!GPUCMD_HAS_SPACE(size))) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 		return;
 	}
 #endif
 
-	u32* dst = gpuCmdBuf + gpuCmdBufOffset;
-	gpuCmdBufOffset += count * 2;
-
-	memcpy(GPUCMD_ASSUME_DST_ALIGNED(dst), src, count * sizeof(u64));
+	u32* dst = gpuCmdBufHead;
+	gpuCmdBufHead += size;
+	memcpy(GPUCMD_ASSUME_DST_ALIGNED(dst), cmd, size * sizeof(u32));
 }
 
 /// Adds a command with a single parameter to the current command buffer.
 static inline void GPUCMD_AddSingleParam(u32 header, u32 param)
 {
-	u64 cmds[1] = {GPUCMD_PACK_U64(header, param)};
-	GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(cmds), cmds);
+	u64 cmd[1] = {GPUCMD_PACK_U64(header, param)};
+	GPUCMD_AddRawCommands_Inline((u32*) cmd, GPUCMD_ARRAY_COUNT(cmd) * 2);
 }
 
 /// Don't use me. Use the macros instead.
 static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 paramlength)
 {
 #ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
-	if(GPUCMD_UNLIKELY(!gpuCmdBuf || gpuCmdBufOffset+paramlength+1>gpuCmdBufSize)) {
+	if(GPUCMD_UNLIKELY(!GPUCMD_HAS_SPACE(paramlength+1))) {
 		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
 		return;
 	}
@@ -155,10 +163,17 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 	paramlength--;
 	header|=(paramlength&0xff)<<20;
 
-	u32 offset = gpuCmdBufOffset; // Local copy allows compiler to optimize properly
+	u32* head = gpuCmdBufHead; // Local copy allows compiler to optimize properly
 
-	gpuCmdBuf[offset++]=param ? param[0] : 0;
-	gpuCmdBuf[offset++]=header;
+	*head++=param ? param[0] : 0;
+	*head++=header;
+
+#ifdef GPUCMD_ENABLE_ZERO_PADDING
+	gpuCmdBufHead = head + paramlength;
+	if(paramlength&1) *gpuCmdBufHead++=0x00000000; //alignment
+#else
+	gpuCmdBufHead = head + paramlength + (paramlength & 1); // Add LSB twice for alignment
+#endif
 
 	if(GPUCMD_LIKELY(paramlength))
 	{
@@ -166,39 +181,10 @@ static inline void GPUCMD_AddInternal_Inline(u32 header, const u32* param, u32 p
 		// 32-bit aligned but NOT 64-bit aligned such that param[1] is 64-bit aligned,
 		// but that requires intelligent allocation.
 		if(GPUCMD_LIKELY(param))
-			memcpy(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), param + 1, paramlength * sizeof(u32));
+			memcpy(GPUCMD_ASSUME_DST_ALIGNED(head), param + 1, paramlength * sizeof(u32));
 		else
-			memset(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), 0, paramlength * sizeof(u32));
+			memset(GPUCMD_ASSUME_DST_ALIGNED(head), 0, paramlength * sizeof(u32));
 	}
-
-	
-#ifdef GPUCMD_ENABLE_ZERO_PADDING
-	gpuCmdBufOffset = offset + paramlength;
-	if(paramlength&1) gpuCmdBuf[gpuCmdBufOffset++]=0x00000000; //alignment
-#else
-	gpuCmdBufOffset = offset + paramlength + (paramlength & 1); // Add LSB twice for alignment
-#endif
-}
-
-/**
- * @brief Adds raw GPU commands to the current command buffer.
- * @param cmd Buffer containing commands to add.
- * @param size Size of the buffer.
- */
-static inline void GPUCMD_AddRawCommands_Inline(const u32* cmd, u32 size)
-{
-	if(GPUCMD_UNLIKELY(!cmd || !size))return;
-
-#ifndef GPUCMD_DISABLE_BOUNDS_CHECKS
-	if(GPUCMD_UNLIKELY(gpuCmdBufOffset+size > gpuCmdBufSize)) {
-		GPUCMD_SvcBreakUserPanicWrapper(); // Shouldn't happen.
-		return;
-	}
-#endif
-
-	u32 offset = gpuCmdBufOffset;
-	gpuCmdBufOffset = offset + size;
-	memcpy(GPUCMD_ASSUME_DST_ALIGNED(gpuCmdBuf + offset), cmd, size*4);
 }
 
 /// Don't use me. Use the macros instead.
@@ -220,8 +206,8 @@ static inline void GPUCMD_Add_Inline(u32 header, const u32* param, u32 paramleng
 /// Constructs a GPUCMD
 #define GPUCMD_Single(reg, val) GPUCMD_MaskedSingle((reg), 0xF, (val))
 
-/// Adds a batch of GPUCMD commands directly.
-#define GPUCMD_AddBatchOfSingles(arr) GPUCMD_AddBatchOfSingles_Int(GPUCMD_ARRAY_COUNT(arr), arr)
+/// Adds a batch of u64 GPUCMD commands directly. WYATT_TODO improve naming because singles are just u64s now.
+#define GPUCMD_AddBatchOfSingles(arr) GPUCMD_AddRawCommands_Inline((u32*) arr, GPUCMD_ARRAY_COUNT(arr) * 2)
 /// Adds a masked register write to the current command buffer.
 #define GPUCMD_AddMaskedWrite(reg, mask, val) GPUCMD_AddSingleParam(GPUCMD_HEADER(0, (mask), (reg)), (val))
 /// Adds a register write to the current command buffer.
