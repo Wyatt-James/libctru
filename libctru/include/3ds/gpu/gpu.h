@@ -57,6 +57,33 @@ static inline void GPUCMD_SetBufferOffset(u32 offset)
 }
 
 /**
+ * @brief Gets the base of the current GPU command buffer.
+ * @return The base.
+ */
+static inline u32* GPUCMD_GetBase(void)
+{
+	return gpuCmdBuf;
+}
+
+/**
+ * @brief Gets the size of the current GPU command buffer.
+ * @return The calculated size.
+ */
+static inline u32 GPUCMD_GetSize(void)
+{
+	return (u32) ((uintptr_t) gpuCmdBufEnd - (uintptr_t) gpuCmdBuf) / sizeof(u32);
+}
+
+/**
+ * @brief Gets the offset of the current GPU command buffer.
+ * @return The calculated offset.
+ */
+static inline u32 GPUCMD_GetOffset(void)
+{
+	return (u32) ((uintptr_t) gpuCmdBufHead - (uintptr_t) gpuCmdBuf) / sizeof(u32);
+}
+
+/**
  * @brief Gets the current GPU command buffer.
  * @param addr Pointer to output the command buffer to.
  * @param size Pointer to output the size (in words) of the command buffer to.
@@ -64,9 +91,9 @@ static inline void GPUCMD_SetBufferOffset(u32 offset)
  */
 static inline void GPUCMD_GetBuffer(u32** addr, u32* size, u32* offset)
 {
-	if(addr)*addr=gpuCmdBuf;
-	if(size)*size=gpuCmdBufEnd-gpuCmdBuf;
-	if(offset)*offset=gpuCmdBufHead-gpuCmdBuf;
+	if(addr)*addr=GPUCMD_GetBase();
+	if(size)*size=GPUCMD_GetSize();
+	if(offset)*offset=GPUCMD_GetOffset();
 }
 
 /**

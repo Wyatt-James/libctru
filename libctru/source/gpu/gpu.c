@@ -11,8 +11,8 @@
 #include <3ds/gpu/shbin.h>
 
 u32* gpuCmdBuf;
-u32 gpuCmdBufSize;
-u32 gpuCmdBufOffset;
+u32* gpuCmdBufHead;
+u32* gpuCmdBufEnd;
 
 void GPUCMD_AddRawCommands(const u32* cmd, u32 size)
 {
@@ -24,18 +24,24 @@ void GPUCMD_Add(u32 header, const u32* param, u32 paramlength)
 	GPUCMD_Add_Inline(header, param, paramlength);
 }
 
-void GPUCMD_Split(u32** addr, u32* size)
+void GPUCMD_Split(u32** addr, u32* pSize)
 {
 	GPUCMD_AddWrite(GPUREG_FINALIZE, 0x12345678);
-	if (gpuCmdBufOffset & 3)
+	if (GPUCMD_GetOffset() & 3)
 		GPUCMD_AddWrite(GPUREG_FINALIZE, 0x12345678); // 16-byte align the buffer
 
-	if (addr) *addr = gpuCmdBuf;
-	if (size) *size = gpuCmdBufOffset;
+	u32* base = GPUCMD_GetBase();
+	u32 size = GPUCMD_GetSize();
+	u32 offset = GPUCMD_GetOffset();
 
-	gpuCmdBuf       += gpuCmdBufOffset;
-	gpuCmdBufSize   -= gpuCmdBufOffset;
-	gpuCmdBufOffset  = 0;
+	if (addr)  *addr = base;
+	if (pSize) *pSize = offset;
+
+	base   += offset;
+	size   -= offset;
+	offset  = 0;
+
+	GPUCMD_SetBuffer(base, size, offset);
 }
 
 static inline u32 floatrawbits(float f)
